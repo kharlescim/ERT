@@ -12,27 +12,40 @@ import xarray as xr
 import numpy as np
 
 LTD_ds = xr.open_dataset('LTD05.nc')
-USDM05_ds = xr.open_dataset('USDM05_2000_2024.nc')
-
-# LTD and USDM only have one variable, so they can be treated as DataArrays
+spei_ds = xr.open_dataset('spei_obs_3D.nc')
 LTD = LTD_ds['LTD']
-USDM = USDM05_ds['USDM']
 
+# Creating new time coordinate
+weekly_time = LTD_ds.time.values
+
+# Converting to weekly (method = linear)
+spei_weekly = spei_ds.interp(time=weekly_time, method="linear")
+
+# Function to convert raw values to percentiles
+# missing values = -999 in obs - might need to alter for proper percentile (7-4)
+def to_percentile(ds, dim='time', missing_val = -999.0):
+
+    valid = ds.where(ds != missing_val)
+    # Convert each grid point's time series to percentile values.
+    return valid.rank(dim=dim, pct=True)
+
+percentiles_spei = to_percentile(spei_weekly)
+
+# ens = 1, so safe to ignore it from dataset
+# testing flattening out entire dataset
+spei_df = percentiles_spei.to_dataframe().reset_index()
 LTD_df = LTD.to_dataframe().reset_index()
-# print(np.sort(LTD_df['LTD'].unique()))
+merged_df = pd.merge(spei_df, LTD_df, on=['time', 'lat', 'lon'], how='inner')
 
-# cleaning up NaN entries and -1 entries 
-df = LTD_df.dropna(subset=['LTD']) 
-df = df[df['LTD'] != -1.0]
+# cleaning up NaN entries 
+df = merged_df.dropna(subset=['LTD']).copy()
 
-#visualizing 
-# print(df['LTD'].value_counts().sort_index())
+# changing -1 classification to 5 to work with featurespace
+df["LTD"] = df["LTD"].replace(-1, 5)
 
-
-# changing datetime to be usable by TensorFlow, changing LTD from float to int to match example 
+# changing datetime to be usable by TensorFlow, changing LTD from float to int to match example
 df["time"] = pd.to_datetime(df["time"]).map(pd.Timestamp.timestamp)
-df["LTD"] = df["LTD"].astype(int)
-df.head() # LTD is target 
+
 
 val_df = df.sample(frac=0.2, random_state=1337)
 train_df = df.drop(val_df.index)
@@ -65,6 +78,18 @@ feature_space = FeatureSpace(
         "lat": "float",
         "lon": "float",
         "time": "float",
+        "SPEI1" : "float",
+        "SPEI3" : "float",
+        "SPEI6" : "float",
+        "SPEI12" : "float",
+        "SPEI24" : "float",
+        "SPEI60" : "float",
+        "SPEI2" : "float",
+        "SPEI9" : "float",
+        "SPEI36" : "float",
+        "SPEI48" : "float",
+        "SPEI72" : "float",
+
     },
     output_mode="concat"
 )
@@ -92,7 +117,7 @@ encoded_features = feature_space.get_encoded_features()
 
 x = keras.layers.Dense(32, activation="relu")(encoded_features)
 x = keras.layers.Dropout(0.5)(x)
-predictions = keras.layers.Dense(5, activation="softmax")(x)
+predictions = keras.layers.Dense(6, activation="softmax")(x) # categories: -1, 0, 1, 2, 3, 4
 
 training_model = keras.Model(inputs=encoded_features, outputs=predictions)
 training_model.compile(
