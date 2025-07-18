@@ -57,6 +57,7 @@ df["time"] = pd.to_datetime(df["time"]).map(pd.Timestamp.timestamp)
 
 print(collections.Counter(df["LTD"]))
 
+df = df.drop(columns = ["SPI9", "SRI6", "SPEI48", "SRI24", "SMP1", "SMP24", "SPEI6", "SPEI60", "SPEI72", "SRI3", "SPI60", "SPI6", "SMP60", "SRI1", "SPEI3", "SRI60", "SPEI2", "SPI3", "SPEI1"])
 
 val_df = df.sample(frac=0.2, random_state=1337)
 train_df = df.drop(val_df.index)
@@ -70,16 +71,16 @@ def dataframe_to_dataset(dataframe):
     return ds
 
 
-train_ds = dataframe_to_dataset(train_df).batch(128).prefetch(tf.data.AUTOTUNE)
-val_ds = dataframe_to_dataset(val_df).batch(128).prefetch(tf.data.AUTOTUNE)
+train_ds = dataframe_to_dataset(train_df).batch(2048).prefetch(tf.data.AUTOTUNE)
+val_ds = dataframe_to_dataset(val_df).batch(2048).prefetch(tf.data.AUTOTUNE)
 
 model = keras.Sequential([
-    keras.Input(shape=(35,)),
-    layers.Dense(128, activation="relu"),
-    layers.Dropout(0.3),
-    layers.Dense(64, activation="relu"),
-    layers.Dropout(0.3),
-    layers.Dense(6, activation="softmax"),
+    keras.Input(shape=(train_df.shape[1] - 1,)),
+    keras.layers.Dense(128, activation="relu"),
+    keras.layers.Dropout(0.3),
+    keras.layers.Dense(64, activation="relu"),
+    keras.layers.Dropout(0.3),
+    keras.layers.Dense(6, activation="softmax"),
 ])
 
 class_weights = class_weight.compute_class_weight(
@@ -103,7 +104,7 @@ model.fit(
     epochs=20,
     validation_data=val_ds,
     verbose=2,
-    # class_weight=class_weight_dict
+    class_weight=class_weight_dict,
     callbacks=[ReduceLROnPlateau, EarlyStopping]
 )
 
