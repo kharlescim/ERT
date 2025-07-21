@@ -10,3 +10,7 @@ used MI/FI scores to do feature selection, selecting categories that had an FI s
 still having trouble using imbalanced dataset with Keras. experimenting with undersampling and upweighting OR undersampling and ensembling multiple models   
 also experimented with using scikit-learn's RandomForestClassifier isntead of Keras, which instantly resulted in much better accuracy, precision, and recall  (.877 macro average, .95 weighted)   
 now experimenting with switching to tensorflow decision forests, and undersampling with that if needed
+---
+found out tensorflow 2.15.0 and tfdf are incompatible, so the code on colab right now doesnt run on my machine until i get that fixed. 
+currently taking a detour to test ydf instead of tfdf, which is a newer, more flexible api of tfdf. 
+as of now, scikit-learn's accuracy is both faster and more accurate
