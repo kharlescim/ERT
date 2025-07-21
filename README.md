@@ -9,4 +9,4 @@ https://colab.research.google.com/drive/1MwmT3HSqhgtpULKR72tfgj3o8BhjTznK?usp=sh
 used MI/FI scores to do feature selection, selecting categories that had an FI score of above .06  
 still having trouble using imbalanced dataset with Keras. experimenting with undersampling and upweighting OR undersampling and ensembling multiple models   
 also experimented with using scikit-learn's RandomForestClassifier isntead of Keras, which instantly resulted in much better accuracy, precision, and recall  (.877 macro average, .95 weighted)   
-- will keep experimenting witH Keras, but as of now sklearn seems like a much more optimistic route. 
+now experimenting with switching to tensorflow decision forests, and undersampling with that if needed
