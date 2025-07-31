@@ -14,3 +14,6 @@ now experimenting with switching to tensorflow decision forests, and undersampli
 found out tensorflow 2.15.0 and tfdf are incompatible, so the code on colab right now doesnt run on my machine until i get that fixed. 
 currently taking a detour to test ydf instead of tfdf, which is a newer, more flexible api of tfdf. 
 as of now, scikit-learn's accuracy is both faster and more accurate
+
+## 7/31 Update
+Code 90% finished. ERT_Project is super outdated, should only really be looked at for data visualization. 
