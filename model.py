@@ -1,5 +1,3 @@
-# excerpt of code from ipynb file from Google Colab - mostly for more efficient model training 
-
 import pandas as pd
 from sklearn.utils import class_weight
 from sklearn.metrics import classification_report
@@ -7,7 +5,6 @@ from sklearn.metrics import classification_report
 import xarray as xr
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-import joblib
 
 LTD_ds = xr.open_dataset('LTD05.nc')
 spei_ds = xr.open_dataset('spei_obs_3D.nc')
@@ -70,4 +67,48 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_val)
 print(classification_report(y_val, y_pred, digits=3))
 
-joblib.dump(model, "C:/Users/kitti/ERT/rf_usdm_model.joblib")
+# predicting on entire df 
+full_df = df.copy() 
+X_full = full_df.drop(columns=["USDM"]).values
+y_full = full_df["USDM"].values
+
+# Predict
+full_df["USDM_pred"] = model.predict(X_full)
+print(classification_report(y_full, full_df["USDM_pred"], digits=3))
+
+
+# converting back into .nc 
+# Reopen USDM to get original shape
+usdm_copy = xr.open_dataset("USDM05_2000_2024.nc")
+usdm_base = usdm_copy["USDM"]
+
+# Make a new array filled with NaNs initially
+pred_array = np.full(usdm_base.shape, np.nan)
+
+# Create a mapping from (time, lat, lon) to index for prediction values
+time_index = {v: i for i, v in enumerate(usdm_base.time.values)}
+lat_index = {v: i for i, v in enumerate(usdm_base.lat.values)}
+lon_index = {v: i for i, v in enumerate(usdm_base.lon.values)}
+
+# convert full_df back to datetime
+full_df["time"] = pd.to_datetime(df["time"], unit="s")
+# Assign predicted values into the correct locations
+for _, row in full_df.iterrows():
+    t = time_index.get(np.datetime64(row["time"], 'ns'))
+    lat = lat_index.get(row["lat"])
+    lon = lon_index.get(row["lon"])
+    if t is not None and lat is not None and lon is not None:
+        pred_array[t, lat, lon] = row["USDM_pred"]
+
+
+# Create a new xarray DataArray for predictions
+pred_da = xr.DataArray(
+    pred_array,
+    coords=usdm_base.coords,
+    dims=usdm_base.dims,
+    name="USDM"
+)
+
+# Create dataset and save
+pred_ds = xr.Dataset({"USDM": pred_da})
+pred_ds.to_netcdf("USDM_predictions.nc")
