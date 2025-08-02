@@ -1,10 +1,10 @@
 import pandas as pd
-from sklearn.utils import class_weight
-from sklearn.metrics import classification_report
-
 import xarray as xr
 import numpy as np
+from sklearn.utils import class_weight
+from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
+
 
 LTD_ds = xr.open_dataset('LTD05.nc')
 spei_ds = xr.open_dataset('spei_obs_3D.nc')
