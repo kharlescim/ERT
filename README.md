@@ -1,19 +1,5 @@
-# ERT
+# Predicting USDM Maps with Mutual Information & Machine Learning
 
-Currently (training model on LTD05.nc only), most of my code is in google colab, as its environment makes it much faster for me to manipulate and visualize the .nc files using xarray. All of my documentation and thoughts will be there as well, at least until enough work is done where basic, step-by-step documentation won't be enough/we get closer to a finished product where overall documentation is necessary. Also included in the repo is the .py file that I use to actually train and run the model, as running in Colab causes it to crash after just 2 epochs. However, it's pretty barebones (just copy paste), to quickly try on my personal machine. The results and my thoughts on it are also all in the Colab. 
-
-https://colab.research.google.com/drive/1MwmT3HSqhgtpULKR72tfgj3o8BhjTznK?usp=sharing (comments allowed) 
-
-
-## 7/21 Update
-used MI/FI scores to do feature selection, selecting categories that had an FI score of above .06  
-still having trouble using imbalanced dataset with Keras. experimenting with undersampling and upweighting OR undersampling and ensembling multiple models   
-also experimented with using scikit-learn's RandomForestClassifier isntead of Keras, which instantly resulted in much better accuracy, precision, and recall  (.877 macro average, .95 weighted)   
-now experimenting with switching to tensorflow decision forests, and undersampling with that if needed
+This project implements a Random Forest Model to objectively classify drought severity across the U.S. using a combination of observed, modeled, and remotely sensed climate indicators. The goal is to predict the U.S. Drought Monitor (USDM) categories by learning from historical data and quantifying the importance of each drought indicator using information-theoretic metrics like mutual information (MI) and fractional information (FI). 
 ---
-found out tensorflow 2.15.0 and tfdf are incompatible, so the code on colab right now doesnt run on my machine until i get that fixed. 
-currently taking a detour to test ydf instead of tfdf, which is a newer, more flexible api of tfdf. 
-as of now, scikit-learn's accuracy is both faster and more accurate
-
-## 7/31 Update
-Code 90% finished. ERT_Project is super outdated, should only really be looked at for data visualization. 
+Included in this repository is the script to generate, run, and save the model and its predictions, along with several Jupyter notebooks to calculate mutual information and plot drought maps. 
