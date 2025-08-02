@@ -14,15 +14,15 @@ usdm_ds = xr.open_dataset('USDM05_2000_2024.nc')
 LTD = LTD_ds['LTD']
 usdm = usdm_ds['USDM']
 
-# Creating new time coordinate
+# creating new time coordinate
 weekly_time = usdm.time.values
 
-# Converting to weekly (method = linear)
+# converting to weekly (method = linear)
 spei_weekly = spei_ds.interp(time=weekly_time, method="linear")
 obs_weekly = obs_ds.interp(time=weekly_time, method="linear")
 
-# Function to convert raw values to percentiles
-# missing values = -999 in obs - might need to alter for proper percentile (7-4)
+# function to convert raw values to percentiles
+# missing values = -999 in obs 
 def to_percentile(ds, dim='time', missing_val = -999.0):
 
     valid = ds.where(ds != missing_val)
@@ -33,7 +33,7 @@ percentiles_spei = to_percentile(spei_weekly)
 percentiles_obs = to_percentile(obs_weekly)
 
 # ens = 1, so safe to ignore it from dataset
-# testing flattening out entire dataset
+# flattening out datasets
 spei_df = percentiles_spei.to_dataframe().reset_index()
 usdm_df = usdm.to_dataframe().reset_index()
 obs_df = (percentiles_obs.to_dataframe().reset_index()).drop(columns=['ens'])
@@ -48,51 +48,52 @@ df = merged_df[["time", "lat", "lon", "USDM", "SPEI9", "SPEI12", "SMP3", "SPEI6"
 df = df.dropna()
 
 
-# changing datetime to be usable by TensorFlow, changing LTD from float to int to match example
+# changing datetime to be usable by model
 df["time"] = pd.to_datetime(df["time"]).map(pd.Timestamp.timestamp)
 
-
+# generating training and validation sets
 val_df = df.sample(frac=0.2, random_state=1337)
 train_df = df.drop(val_df.index)
 
 
-# Split features and labels
+# split features and labels
 X_train = train_df.drop(columns=["USDM"]).values
 y_train = train_df["USDM"].values
-
 X_val = val_df.drop(columns=["USDM"]).values
 y_val = val_df["USDM"].values
+
+# train model, generate classification report
 model = RandomForestClassifier(class_weight="balanced", n_jobs=-1, random_state=42)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_val)
 print(classification_report(y_val, y_pred, digits=3))
 
-# predicting on entire df 
+# predicting on entire USDM dataset
 full_df = df.copy() 
 X_full = full_df.drop(columns=["USDM"]).values
 y_full = full_df["USDM"].values
 
-# Predict
+# predict
 full_df["USDM_pred"] = model.predict(X_full)
 print(classification_report(y_full, full_df["USDM_pred"], digits=3))
 
 
 # converting back into .nc 
-# Reopen USDM to get original shape
+# reopen USDM to get original shape
 usdm_copy = xr.open_dataset("USDM05_2000_2024.nc")
 usdm_base = usdm_copy["USDM"]
 
-# Make a new array filled with NaNs initially
+# make a new array filled with NaNs initially
 pred_array = np.full(usdm_base.shape, np.nan)
 
-# Create a mapping from (time, lat, lon) to index for prediction values
+# create a mapping from (time, lat, lon) to index for prediction values
 time_index = {v: i for i, v in enumerate(usdm_base.time.values)}
 lat_index = {v: i for i, v in enumerate(usdm_base.lat.values)}
 lon_index = {v: i for i, v in enumerate(usdm_base.lon.values)}
 
 # convert full_df back to datetime
 full_df["time"] = pd.to_datetime(df["time"], unit="s")
-# Assign predicted values into the correct locations
+# assign predicted values into the correct locations
 for _, row in full_df.iterrows():
     t = time_index.get(np.datetime64(row["time"], 'ns'))
     lat = lat_index.get(row["lat"])
@@ -101,7 +102,7 @@ for _, row in full_df.iterrows():
         pred_array[t, lat, lon] = row["USDM_pred"]
 
 
-# Create a new xarray DataArray for predictions
+# create a new xarray DataArray for predictions
 pred_da = xr.DataArray(
     pred_array,
     coords=usdm_base.coords,
@@ -109,6 +110,6 @@ pred_da = xr.DataArray(
     name="USDM"
 )
 
-# Create dataset and save
+# create dataset and save
 pred_ds = xr.Dataset({"USDM": pred_da})
 pred_ds.to_netcdf("USDM_predictions.nc")
